@@ -38,4 +38,14 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Garmin data (real data ignored; sample checked in)
+data/garmin.json
+data/garmin.db
+data/activities.json
+data/sleep.json
+!data/garmin.sample.json
+
+# Python virtualenv
+.venv/
 next-env.d.ts

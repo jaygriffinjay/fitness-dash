@@ -1,46 +1,101 @@
-# Bootstrap Fullstack Webapp
+# fitness-dash
 
-An opinionated Next.js boilerplate. Clone it, delete what you don't need, start building.
+> **Work in progress.** Actively being built.
+
+A personal fitness dashboard for Garmin data. The goal is simple, usable sleep (and eventually activity) data that's actually better than what the fitness apps give you — with full control to add, edit, and delete records, including naps that Garmin misses entirely.
+
+Garmin Connect's sleep view is fine for a glance, but it doesn't let you correct bad data, log naps, or compare nights side by side in a way that's actually readable. This fixes that.
+
+![fitness-dash screenshot](public/fitness-dash.png)
+
+## Current focus: sleep
+
+- **Sleep timeline** — horizontal bar showing each stage (Deep, Light, REM, Awake) proportionally across the night. Hover any segment for the exact time range.
+- **Sleep pie chart** — donut chart breaking down stage totals for the night.
+- **Nap tracking** — manually log naps Garmin misses. Naps appear as separate bars adjacent to the main sleep bar.
+- **Raw stage table** — full list of every sleep stage record for the selected night.
+
+## Planned
+
+- Edit and delete individual sleep stage records
+- Multi-night comparison view (scroll through recent nights as stacked bars)
+- Activity data — workouts, heart rate, HRV trends
+
+## Data
+
+Sleep data lives in `data/garmin.db` (SQLite). The `sleep_stages` table has one row per stage segment:
+
+```
+date TEXT, start_gmt INTEGER, end_gmt INTEGER, stage INTEGER
+```
+
+Stage values: `-1` Unmeasurable · `0` Deep · `1` Light · `2` REM · `3` Awake
+
+Timestamps are Unix milliseconds in UTC. All display times are converted to `America/Chicago`.
+
+Naps are stored in a separate `naps` table in the same database (created by `scripts/migrate-naps.ts`).
+
+## Data Pipeline
+
+The dashboard reads from a local SQLite file. Getting data into it is a two-step process.
+
+### 1. Fetch from Garmin Connect API
+
+Uses the [`garminconnect`](https://github.com/cyberjunky/python-garmin-connect) Python library. Credentials go in a `.env` file in the project root:
+
+```
+GARMIN_EMAIL=you@example.com
+GARMIN_PASSWORD=yourpassword
+```
+
+Set up the Python environment once:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install garminconnect python-dotenv
+```
+
+Then fetch:
+
+```bash
+# Sleep data — incremental, safe to re-run (skips already-fetched dates)
+.venv/bin/python scripts/fetch_sleep.py
+
+# Activities — full refresh every run
+.venv/bin/python scripts/fetch_activities.py
+```
+
+Both scripts save the full raw API responses to `data/sleep.json` and `data/activities.json` — nothing is parsed or stripped.
+
+### 2. Import into SQLite
+
+```bash
+npx tsx scripts/import.ts
+```
+
+Reads `data/sleep.json` and writes one row per sleep stage segment into `sleep_stages`. Uses `INSERT OR IGNORE` so it's safe to re-run — only new records are added.
+
+To create the naps table (first time only):
+
+```bash
+npx tsx scripts/migrate-naps.ts
+```
+
+### Typical refresh flow
+
+```bash
+.venv/bin/python scripts/fetch_sleep.py   # pull new nights from Garmin
+npx tsx scripts/import.ts                 # load them into SQLite
+```
+
+Then reload the dashboard — it always queries the latest date in the database.
 
 ## Stack
 
-**Next.js 16** with App Router and React 19. Server Components by default, `"use client"` only when you need state or browser APIs.
-
-**Tailwind CSS v4** — configured entirely in `globals.css` via `@theme inline`. No `tailwind.config.js`. All theme tokens are CSS variables bridged into Tailwind's utility system.
-
-**shadcn/ui** (new-york style) — components are copied into `src/components/ui/` so you own the code. Install new ones with `npx shadcn add <component>`. Backed by Radix UI primitives.
-
-**Custom typography system** — `src/components/typography/` wraps every HTML text element (`H1`–`H6`, `Paragraph`, `Bold`, `Italic`, `Link`, `InlineCode`, etc.) into composable, overridable components. Never write raw `<h1>` or `<p>` tags.
-
-**next-themes** for light / dark / system mode. Switches via `.dark` class on `<html>` so all CSS variable overrides fire automatically.
-
-**oklch color space** for all theme tokens. Perceptually uniform, P3-gamut capable, human-readable values.
-
-## Dependencies
-
-- `radix-ui` — headless primitives underlying all shadcn components
-- `lucide-react` — icons
-- `react-hook-form` + `@hookform/resolvers` + `zod` — forms and validation
-- `recharts` — charts (via shadcn chart wrapper)
-- `sonner` — toast notifications
-- `next-themes` — dark mode
-- `cmdk` — command menu primitive
-- `vaul` — drawer primitive
-- `embla-carousel-react` — carousel
-- `input-otp` — OTP input
-- `react-day-picker` + `date-fns` — date picker
-- `react-resizable-panels` — resizable split layouts
-- `class-variance-authority` + `clsx` + `tailwind-merge` — class utilities (`cn()`)
-- `tw-animate-css` — animation utilities for shadcn transitions
-
-## Fonts
-
-Four fonts loaded via `next/font/google`, exposed as CSS variables on `<body>`. Apply with `style={{ fontFamily: "var(--font-name)" }}` — not Tailwind classes.
-
-- `--font-geist-sans` — default body font
-- `--font-geist-mono` — monospace alternative
-- `--font-jetbrains-mono` — code and technical text, has italic variant
-- `--font-sekuya` — display / hero headings
+- **Next.js** (App Router) — server components query SQLite directly, no API layer needed
+- **better-sqlite3** — synchronous SQLite reads in server components
+- **Tailwind CSS** — dark theme throughout
+- **recharts** — pie/donut chart
 
 ## Getting Started
 
@@ -49,53 +104,8 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-## Project Structure
-
-```
-src/
-  app/
-    fonts.ts            # Font definitions
-    globals.css         # Tailwind config, theme tokens, base styles
-    layout.tsx          # Root layout — ThemeProvider, TooltipProvider, fonts
-  components/
-    typography/         # H1–H6, Paragraph, Bold, Italic, Link, InlineCode, etc.
-    ui/                 # shadcn components
-    mode-toggle.tsx     # Light / dark / system switcher
-  lib/
-    registry.ts         # Every component: import path, exports, description
-    utils.ts            # cn() utility
-  hooks/
-    use-mobile.ts
-.github/
-  copilot-instructions.md   # Copilot rules and stack context
-  skills/build-ui/SKILL.md  # Copilot skill for building UI
-```
-
-## Key Decisions
-
-**Typography components over raw HTML.** `<H1>`, `<Paragraph>`, `<Bold>` etc. accept `className` and `style`, nest freely inside each other, and enforce consistent defaults. Overriding is always additive.
-
-**Fonts via CSS variables, not Tailwind classes.** CSS variables work inside any component, can be inherited through the tree, and can be swapped at runtime. Tailwind font utilities can't do any of that.
-
-**Semantic color tokens everywhere.** `text-foreground`, `bg-primary`, `text-muted-foreground` — not `text-gray-900` or `text-blue-500`. Dark mode flips automatically, no per-component `dark:` prefixes needed.
-
-**`registry.ts` as source of truth.** Documents every component in the project so Copilot (and you) always know what's available, where it lives, and when to use it.
-
-## Reference Pages
-
-Included as living documentation — delete or keep as needed.
-
-- `/typography` — every typography component, edge cases, composition examples
-- `/shadcn` — every major shadcn component with basic examples
-- `/design` — how `globals.css`, the theme system, and font system work
-
-## Scripts
+Place your `garmin.db` in `data/`, then run the nap migration if you haven't:
 
 ```bash
-npm run dev      # dev server
-npm run build    # production build
-npm run start    # serve production build
-npm run lint     # eslint
+npx tsx scripts/migrate-naps.ts
 ```

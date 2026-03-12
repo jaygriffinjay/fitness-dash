@@ -1,0 +1,48 @@
+{
+  "fetched_at": "2026-01-01T00:00:00+00:00",
+  "activity_count": 3,
+  "activities": [
+    {
+      "id": 1,
+      "name": "Sample Morning Run",
+      "type": "running",
+      "date": "2026-01-01",
+      "start_time": "2026-01-01 07:30:00",
+      "distance_km": 8.2,
+      "duration_min": 45.0,
+      "elevation_gain_m": 85,
+      "avg_hr": 152,
+      "max_hr": 168,
+      "calories": 610,
+      "avg_speed_kph": 10.9
+    },
+    {
+      "id": 2,
+      "name": "Sample Bike Ride",
+      "type": "cycling",
+      "date": "2025-12-30",
+      "start_time": "2025-12-30 09:00:00",
+      "distance_km": 42.1,
+      "duration_min": 95.5,
+      "elevation_gain_m": 420,
+      "avg_hr": 138,
+      "max_hr": 162,
+      "calories": 1100,
+      "avg_speed_kph": 26.4
+    },
+    {
+      "id": 3,
+      "name": "Sample Evening Walk",
+      "type": "walking",
+      "date": "2025-12-28",
+      "start_time": "2025-12-28 18:15:00",
+      "distance_km": 4.5,
+      "duration_min": 55.0,
+      "elevation_gain_m": 20,
+      "avg_hr": 98,
+      "max_hr": 115,
+      "calories": 250,
+      "avg_speed_kph": 4.9
+    }
+  ]
+}
